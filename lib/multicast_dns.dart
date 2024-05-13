@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:developer';
 import 'dart:io';
 
 import 'src/constants.dart';
@@ -111,7 +112,7 @@ class MDnsClient {
       listenAddress.address,
       selectedMDnsPort,
       reuseAddress: true,
-      reusePort: true,
+      reusePort: false,
       ttl: 255,
     );
 
@@ -132,13 +133,20 @@ class MDnsClient {
     for (final NetworkInterface interface in interfaces) {
       // Create a socket for sending on each adapter.
       final InternetAddress targetAddress = interface.addresses[0];
-      final RawDatagramSocket socket = await _rawDatagramSocketFactory(
-        targetAddress,
-        selectedMDnsPort,
-        reuseAddress: true,
-        reusePort: true,
-        ttl: 255,
-      );
+      final RawDatagramSocket socket;
+
+      try {
+        socket = await _rawDatagramSocketFactory(
+          targetAddress,
+          selectedMDnsPort,
+          reuseAddress: true,
+          reusePort: false,
+          ttl: 255,
+        );
+      } on Exception catch (_) {
+        continue;
+      }
+
       _sockets.add(socket);
       // Ensure that we're using this address/interface for multicast.
       if (targetAddress.type == InternetAddressType.IPv4) {

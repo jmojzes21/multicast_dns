@@ -106,12 +106,15 @@ class MDnsClient {
     final int selectedMDnsPort = _mDnsPort = mDnsPort;
     _mDnsAddress = mDnsAddress;
 
+    bool reusePort = true;
+    if (Platform.isWindows) reusePort = false;
+
     // Listen on all addresses.
     final RawDatagramSocket incoming = await _rawDatagramSocketFactory(
       listenAddress.address,
       selectedMDnsPort,
       reuseAddress: true,
-      reusePort: true,
+      reusePort: reusePort,
       ttl: 255,
     );
 
@@ -132,25 +135,27 @@ class MDnsClient {
     for (final NetworkInterface interface in interfaces) {
       final InternetAddress targetAddress = interface.addresses[0];
 
-      // Ensure that we're using this address/interface for multicast.
-      if (targetAddress.type == InternetAddressType.IPv6) {
-        final RawDatagramSocket socket = await _rawDatagramSocketFactory(
-          targetAddress,
-          selectedMDnsPort,
-          reuseAddress: true,
-          reusePort: true,
-          ttl: 255,
-        );
-        _ipv6InterfaceSockets.add(socket);
-        socket.setRawOption(RawSocketOption.fromInt(
-          RawSocketOption.levelIPv6,
-          RawSocketOption.IPv6MulticastInterface,
-          interface.index,
-        ));
-      }
+      try {
+        // Ensure that we're using this address/interface for multicast.
+        if (targetAddress.type == InternetAddressType.IPv6) {
+          final RawDatagramSocket socket = await _rawDatagramSocketFactory(
+            targetAddress,
+            selectedMDnsPort,
+            reuseAddress: true,
+            reusePort: reusePort,
+            ttl: 255,
+          );
+          _ipv6InterfaceSockets.add(socket);
+          socket.setRawOption(RawSocketOption.fromInt(
+            RawSocketOption.levelIPv6,
+            RawSocketOption.IPv6MulticastInterface,
+            interface.index,
+          ));
+        }
 
-      // Join multicast on this interface.
-      incoming.joinMulticast(_mDnsAddress!, interface);
+        // Join multicast on this interface.
+        incoming.joinMulticast(_mDnsAddress!, interface);
+      } catch (_) {}
     }
     incoming.listen((RawSocketEvent event) => _handleIncoming(event, incoming));
     _started = true;

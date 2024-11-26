@@ -1,7 +1,8 @@
 name: multicast_dns
 description: Dart package for performing mDNS queries (e.g. Bonjour, Avahi).
+repository: https://github.com/jmojzes21/multicast_dns
 publish_to: none
-version: 0.3.2+7
+version: 0.3.2+8
 
 environment:
   sdk: ^3.3.0
